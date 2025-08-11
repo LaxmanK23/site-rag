@@ -1,0 +1,76 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Website RAG Starter</title>
+  <style>
+    body{font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; margin: 24px; max-width: 900px}
+    input, button, textarea{font-size: 16px; padding: 8px}
+    .row{display:flex; gap:8px; margin-bottom:12px}
+    .card{border:1px solid #ddd; padding:12px; border-radius:8px; margin:12px 0}
+    .sources a{display:block; margin:4px 0; text-decoration:none}
+    code{background:#f6f8fa; padding:2px 4px; border-radius:4px}
+  </style>
+</head>
+<body>
+  <h1>Website RAG Starter</h1>
+  <div class="card">
+    <h3>1) Ingest a website</h3>
+    <div class="row">
+      <input id="url" style="flex:1" placeholder="https://example.com" />
+      <button onclick="ingest()">Ingest</button>
+    </div>
+    <div id="ingestStatus"></div>
+  </div>
+
+  <div class="card">
+    <h3>2) Ask a question</h3>
+    <div class="row">
+      <select id="site"></select>
+      <input id="question" style="flex:1" placeholder="Ask about the site..." />
+      <button onclick="ask()">Ask</button>
+    </div>
+    <div id="answer"></div>
+  </div>
+
+  <div class="card">
+    <h3>Known sites</h3>
+    <div id="sites"></div>
+  </div>
+
+<script>
+async function refreshSites(){
+  const r = await fetch('/sites'); const s = await r.json();
+  const sel = document.getElementById('site');
+  sel.innerHTML = '';
+  s.forEach(x=>{
+    const o = document.createElement('option');
+    o.value = x.site_id; o.textContent = x.seed_url + ' ('+x.pages+' pages, '+x.chunks+' chunks)';
+    sel.appendChild(o);
+  });
+  document.getElementById('sites').innerHTML = s.map(x => (
+    `<div><code>${x.site_id}</code> — <a href="${x.seed_url}" target="_blank">${x.seed_url}</a> — pages: ${x.pages} — chunks: ${x.chunks}</div>`
+  )).join('');
+}
+async function ingest(){
+  const url = document.getElementById('url').value;
+  document.getElementById('ingestStatus').textContent = 'Crawling & embedding...';
+  const r = await fetch('/ingest', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({url})});
+  const j = await r.json();
+  if(!r.ok){ document.getElementById('ingestStatus').textContent = 'Error: '+(j.detail||JSON.stringify(j)); return; }
+  document.getElementById('ingestStatus').textContent = 'Done. site_id='+j.site_id;
+  refreshSites();
+}
+async function ask(){
+  const site_id = document.getElementById('site').value;
+  const question = document.getElementById('question').value;
+  const r = await fetch('/ask', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({site_id, question})});
+  const j = await r.json();
+  const srcs = (j.sources||[]).map((s,i)=>`<a href="${s.url}" target="_blank">[${i+1}] ${s.url}</a>`).join('');
+  document.getElementById('answer').innerHTML = `<pre>${j.answer}</pre><div class="sources">${srcs}</div><div>mode: <code>${j.mode}</code></div>`;
+}
+refreshSites();
+</script>
+</body>
+</html>
