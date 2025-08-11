@@ -124,9 +124,36 @@
         padding: 2px 4px;
         border-radius: 4px;
       }
+      :root[data-theme="dark"] {
+        --bg: #0b1117;
+        --card: #0f1720;
+        --border: #1f2937;
+        --text: #e5e7eb;
+        --muted: #9aa4b2;
+      }
     </style>
   </head>
   <body>
+    <button id="themeBtn" style="position: fixed; right: 16px; top: 16px">
+      🌙
+    </button>
+    <script>
+      (function () {
+        const btn = document.getElementById("themeBtn");
+        const saved = localStorage.getItem("theme") || "light";
+        setTheme(saved);
+        btn.onclick = () =>
+          setTheme(
+            document.documentElement.dataset.theme === "dark" ? "light" : "dark"
+          );
+        function setTheme(mode) {
+          document.documentElement.dataset.theme = mode;
+          localStorage.setItem("theme", mode);
+          btn.textContent = mode === "dark" ? "🌞" : "🌙";
+        }
+      })();
+    </script>
+
     <h1>Website RAG Starter</h1>
 
     <div class="card">
@@ -203,6 +230,9 @@
         >
 
         <button id="askBtn" onclick="ask()">Ask</button>
+        <button id="copyBtn" onclick="copyAnswer()" title="Copy answer">
+          Copy
+        </button>
       </div>
 
       <div id="answerWrap" class="row" style="margin-top: 8px; display: none">
@@ -322,6 +352,63 @@
         }
       }
 
+      function copyAnswer() {
+        const a = document.getElementById("answer");
+        const txt = a.innerText || a.textContent || "";
+        if (!txt.trim()) return;
+        navigator.clipboard.writeText(txt).then(
+          () => toast("Answer copied!"),
+          () => toast("Copy failed")
+        );
+      }
+
+      // simple keyword highlight (after rendering)
+      function highlight(text, query) {
+        const terms = query
+          .toLowerCase()
+          .split(/\s+/)
+          .filter((t) => t.length > 2);
+        if (!terms.length) return text;
+        // escape HTML once, then inject <mark>
+        const escape = (s) =>
+          s.replace(
+            /[&<>]/g,
+            (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[m])
+          );
+        let html = escape(text);
+        terms.forEach((t) => {
+          const re = new RegExp(
+            `\\b(${t.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\$&")})\\b`,
+            "gi"
+          );
+          html = html.replace(re, "<mark>$1</mark>");
+        });
+        return html;
+      }
+
+      // patch your renderAnswer() to call highlight()
+      function renderAnswer(j) {
+        const q = document.getElementById("question").value || "";
+        const links = (j.sources || [])
+          .map(
+            (s, i) =>
+              `<a href="${s.url}" target="_blank">[${i + 1}] ${s.url}</a>`
+          )
+          .join("");
+        const text = (j.answer || "").replace(/\[Source\s+(\d+)\]/g, "[$1]");
+        const snippets = (j.sources || [])
+          .map(
+            (s, i) =>
+              `<details><summary>Source [${i + 1}] ${
+                s.url
+              }</summary><div class="muted">score: ${Number(
+                s.score || 0
+              ).toFixed(3)}</div></details>`
+          )
+          .join("");
+        const highlighted = highlight(text, q);
+        return `${highlighted}\n\n<div class="sources">${links}</div>${snippets}`;
+      }
       /* SINGLE ask() — no duplicates */
       async function ask() {
         savePrefs();
