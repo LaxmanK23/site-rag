@@ -7,20 +7,30 @@ from pydantic import BaseModel
 from crawler import crawl_site
 from embedder import SiteIndex
 from rag import answer_question
-
+from typing import Optional
 app = FastAPI(title="Website RAG Starter")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
-
+from dotenv import load_dotenv
+load_dotenv()
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
 os.makedirs(DATA_DIR, exist_ok=True)
 
 class IngestReq(BaseModel):
     url: str
 
+# class AskReq(BaseModel):
+#     site_id: str
+#     question: str
+#     k: int = 6
 class AskReq(BaseModel):
     site_id: str
     question: str
     k: int = 6
+    gen_mode: Optional[str] = None   # "extractive" | "openai" | "ollama"
+    model: Optional[str] = None
+    temperature: Optional[float] = 0.2
+    max_tokens: Optional[int] = 512
+    rerank: Optional[bool] = False
 
 @app.get("/health")
 def health():
@@ -68,10 +78,28 @@ async def ingest(req: IngestReq):
 
     return meta
 
+# @app.post("/ask")
+# def ask(req: AskReq):
+#     indexer = SiteIndex(site_id=req.site_id, base_dir=DATA_DIR)
+#     if not indexer.exists():
+#         raise HTTPException(404, "Unknown site_id. Ingest first.")
+#     result = answer_question(req.question, indexer, k=req.k)
+#     return JSONResponse(result)
+
+
 @app.post("/ask")
 def ask(req: AskReq):
     indexer = SiteIndex(site_id=req.site_id, base_dir=DATA_DIR)
     if not indexer.exists():
         raise HTTPException(404, "Unknown site_id. Ingest first.")
-    result = answer_question(req.question, indexer, k=req.k)
+    result = answer_question(
+        req.question,
+        indexer,
+        k=req.k,
+        gen_mode=(req.gen_mode or "").lower(),
+        model=req.model,
+        temperature=req.temperature or 0.2,
+        max_tokens=req.max_tokens or 512,
+        rerank=bool(req.rerank),
+    )
     return JSONResponse(result)

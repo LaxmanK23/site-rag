@@ -63,7 +63,7 @@ Pipfile.lock
 poetry.lock
 
 # dotenv
-.env
+# .env
 
 # virtualenv
 .venv/
