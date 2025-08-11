@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Website RAG Starter</title>
+
+    <style>
+      :root {
+        --bg: #0b0f14;
+        --panel: #0f151c;
+        --muted: #8b98a5;
+        --text: #e6edf3;
+        --border: #1f2731;
+        --accent: #3b82f6;
+        --accent-2: #60a5fa;
+        --ok: #22c55e;
+        --warn: #f59e0b;
+        --error: #ef4444;
+        --card: #0f151c;
+        --chip: #0b1220;
+        --shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+      }
+      :root[data-theme="light"] {
+        --bg: #f6f8fb;
+        --panel: #ffffff;
+        --muted: #667185;
+        --text: #0f172a;
+        --border: #e5e7eb;
+        --accent: #2563eb;
+        --accent-2: #3b82f6;
+        --card: #ffffff;
+        --chip: #eef2ff;
+        --shadow: 0 10px 30px rgba(2, 6, 23, 0.08);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        height: 100%;
+      }
+      body {
+        margin: 0;
+        font: 14.5px/1.5 ui-sans-serif, system-ui, -apple-system, Segoe UI,
+          Roboto, Arial;
+        color: var(--text);
+        background: linear-gradient(180deg, var(--bg), #0b0f14);
+      }
+
+      .wrap {
+        max-width: 1080px;
+        margin: 40px auto;
+        padding: 0 20px;
+      }
+      header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 24px;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 700;
+        font-size: 22px;
+        letter-spacing: 0.2px;
+      }
+      .logo {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, var(--accent), var(--accent-2));
+        display: grid;
+        place-items: center;
+        color: white;
+        box-shadow: var(--shadow);
+      }
+      .sub {
+        color: var(--muted);
+        font-weight: 500;
+      }
+
+      .toolbar {
+        margin-left: auto;
+        display: flex;
+        gap: 8px;
+      }
+      .btn {
+        border: 1px solid var(--border);
+        background: var(--chip);
+        color: var(--text);
+        padding: 8px 12px;
+        border-radius: 10px;
+        cursor: pointer;
+      }
+      .btn.primary {
+        background: var(--accent);
+        border-color: transparent;
+        color: #fff;
+      }
+      .btn.secondary {
+        background: transparent;
+      }
+      .btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+      .icon {
+        font-style: normal;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: 1.2fr 0.8fr;
+        gap: 18px;
+      }
+      @media (max-width: 920px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        box-shadow: var(--shadow);
+      }
+      .card {
+        padding: 18px;
+      }
+      .card h3 {
+        margin: 6px 0 14px;
+        font-size: 16px;
+      }
+
+      .row {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .field {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        min-width: 160px;
+      }
+      .label {
+        font-size: 12px;
+        color: var(--muted);
+        font-weight: 600;
+        letter-spacing: 0.3px;
+        text-transform: uppercase;
+      }
+      input,
+      select {
+        width: 100%;
+        padding: 10px 12px;
+        color: var(--text);
+        background: #0b1220;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        outline: none;
+      }
+      :root[data-theme="light"] input,
+      :root[data-theme="light"] select {
+        background: #fff;
+      }
+      input[type="range"] {
+        padding: 0;
+      }
+
+      .stack {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        background: var(--chip);
+        border: 1px solid var(--border);
+        color: var(--text);
+        font-size: 12px;
+      }
+      .status {
+        font-size: 13px;
+        color: var(--muted);
+        margin-top: 8px;
+      }
+      .answer {
+        margin-top: 10px;
+        background: #0b1220;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 14px;
+        white-space: pre-wrap;
+      }
+      :root[data-theme="light"] .answer {
+        background: #fff;
+      }
+      .sources a {
+        display: block;
+        text-decoration: none;
+        margin: 3px 0;
+        color: var(--accent);
+      }
+      details {
+        margin-top: 8px;
+        border: 1px dashed var(--border);
+        border-radius: 10px;
+        padding: 8px 10px;
+        background: transparent;
+      }
+      summary {
+        cursor: pointer;
+      }
+
+      .table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0 8px;
+      }
+      .tr {
+        display: grid;
+        grid-template-columns: 180px 1fr 120px 120px;
+        gap: 10px;
+        align-items: center;
+        padding: 8px 10px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: var(--card);
+      }
+      .th {
+        color: var(--muted);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+      }
+      .toast {
+        position: fixed;
+        right: 18px;
+        bottom: 18px;
+        background: #111827;
+        color: #fff;
+        padding: 10px 12px;
+        border-radius: 10px;
+        display: none;
+      }
+      .chip-ok {
+        background: rgba(34, 197, 94, 0.15);
+        color: #22c55e;
+        border: 1px solid rgba(34, 197, 94, 0.25);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <div class="brand">
+          <div class="logo">R</div>
+          <div>
+            Website RAG Starter<br /><span class="sub"
+              >Crawl · Embed · Ask with citations</span
+            >
+          </div>
+        </div>
+        <div class="toolbar">
+          <button id="themeBtn" class="btn secondary">
+            <span class="icon">🌙</span>
+          </button>
+          <a href="#" class="btn secondary" onclick="location.reload()"
+            >Refresh</a
+          >
+        </div>
+      </header>
+
+      <div class="grid">
+        <!-- Left column -->
+        <section class="panel card">
+          <h3>1) Ingest a website</h3>
+          <div class="row">
+            <div class="field">
+              <label class="label">URL</label>
+              <input id="url" placeholder="https://example.com" />
+            </div>
+            <div class="field" style="align-self: end; min-width: 120px">
+              <button id="ingestBtn" class="btn primary" onclick="ingest()">
+                Ingest
+              </button>
+            </div>
+          </div>
+          <div id="ingestStatus" class="status"></div>
+        </section>
+
+        <!-- Right column -->
+        <section class="panel card">
+          <h3>Known sites</h3>
+          <div id="sites"></div>
+        </section>
+
+        <!-- Ask row (full width) -->
+        <section class="panel card" style="grid-column: 1 / -1">
+          <div class="stack" style="justify-content: space-between">
+            <h3>2) Ask a question</h3>
+            <span id="modePill" class="pill" style="display: none"></span>
+          </div>
+
+          <div class="row">
+            <div class="field" style="min-width: 280px">
+              <label class="label">Site</label>
+              <select id="site"></select>
+            </div>
+            <div class="field" style="flex: 2">
+              <label class="label">Question</label>
+              <input id="question" placeholder="Ask about the selected site…" />
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="field">
+              <label class="label">Provider</label>
+              <select id="provider" onchange="onProviderChange()">
+                <option value="extractive">Extractive (free)</option>
+                <option value="openai">OpenAI</option>
+                <option value="ollama">Ollama (local)</option>
+                <option value="localsum">Local summarizer (free)</option>
+              </select>
+            </div>
+            <div class="field">
+              <label class="label">Model</label>
+              <input id="model" placeholder="auto (per provider)" />
+            </div>
+            <div class="field" style="min-width: 180px">
+              <label class="label"
+                >Temperature <span id="tempOut" class="sub"></span
+              ></label>
+              <input
+                id="temperature"
+                type="range"
+                min="0"
+                max="1"
+                step="0.1"
+                value="0.2"
+                oninput="tempOut.textContent=this.value"
+              />
+            </div>
+            <div class="field" style="max-width: 110px">
+              <label class="label">Top-K</label>
+              <input id="topk" type="number" value="6" min="1" max="20" />
+            </div>
+            <div class="field" style="max-width: 140px">
+              <label class="label">Max tokens</label>
+              <input
+                id="max_tokens"
+                type="number"
+                value="512"
+                min="64"
+                max="4096"
+              />
+            </div>
+            <div class="field" style="min-width: 120px; align-self: end">
+              <label class="label">Options</label>
+              <label
+                style="
+                  display: flex;
+                  gap: 8px;
+                  align-items: center;
+                  color: var(--muted);
+                "
+              >
+                <input id="rerank" type="checkbox" /> Re-rank
+              </label>
+            </div>
+            <div
+              class="field"
+              style="align-self: end; min-width: 180px; display: flex; gap: 8px"
+            >
+              <button id="askBtn" class="btn primary" onclick="ask()">
+                Ask
+              </button>
+              <button id="copyBtn" class="btn" onclick="copyAnswer()">
+                Copy
+              </button>
+            </div>
+          </div>
+
+          <div id="answerWrap" style="display: none">
+            <div id="answer" class="answer"></div>
+          </div>
+        </section>
+      </div>
+
+      <div id="toast" class="toast"></div>
+    </div>
+
+    <script>
+      // THEME
+      (function () {
+        const btn = document.getElementById("themeBtn");
+        const saved = localStorage.getItem("theme") || "dark";
+        setTheme(saved);
+        btn.onclick = () =>
+          setTheme(
+            document.documentElement.dataset.theme === "dark" ? "light" : "dark"
+          );
+        function setTheme(mode) {
+          document.documentElement.dataset.theme = mode;
+          localStorage.setItem("theme", mode);
+          btn.innerHTML =
+            mode === "dark"
+              ? '<span class="icon">🌞</span>'
+              : '<span class="icon">🌙</span>';
+        }
+      })();
+
+      // STATE
+      const defaults = {
+        extractive: { model: "" },
+        openai: { model: "gpt-4o-mini" },
+        ollama: { model: "llama3.1:8b-instruct" },
+        localsum: { model: "t5-small" },
+      };
+
+      function byId(id) {
+        return document.getElementById(id);
+      }
+      function val(id) {
+        return byId(id).value;
+      }
+      function toast(msg, ms = 2800) {
+        const t = byId("toast");
+        t.textContent = msg;
+        t.style.display = "block";
+        setTimeout(() => (t.style.display = "none"), ms);
+      }
+
+      function savePrefs() {
+        const prefs = {
+          provider: val("provider"),
+          model: val("model"),
+          temperature: val("temperature"),
+          topk: val("topk"),
+          max_tokens: val("max_tokens"),
+          rerank: byId("rerank").checked,
+        };
+        localStorage.setItem("rag-prefs", JSON.stringify(prefs));
+      }
+      function loadPrefs() {
+        const p = JSON.parse(localStorage.getItem("rag-prefs") || "{}");
+        if (p.provider) byId("provider").value = p.provider;
+        onProviderChange();
+        if (p.model) byId("model").value = p.model;
+        if (p.temperature) {
+          byId("temperature").value = p.temperature;
+          byId("tempOut").textContent = p.temperature;
+        }
+        if (p.topk) byId("topk").value = p.topk;
+        if (p.max_tokens) byId("max_tokens").value = p.max_tokens;
+        if (p.rerank != null) byId("rerank").checked = p.rerank;
+      }
+      function onProviderChange() {
+        const p = val("provider");
+        if (!byId("model").value.trim())
+          byId("model").value = defaults[p].model || "";
+        savePrefs();
+      }
+
+      // DATA
+      async function refreshSites() {
+        try {
+          const r = await fetch("/sites");
+          const s = await r.json();
+          const sel = byId("site");
+          sel.innerHTML = "";
+          s.forEach((x) => {
+            const o = document.createElement("option");
+            o.value = x.site_id;
+            o.textContent = `${x.seed_url} (${x.pages} pages, ${x.chunks} chunks)`;
+            sel.appendChild(o);
+          });
+          // table
+          byId("sites").innerHTML = `
+          <div class="tr th"><div>Site ID</div><div>URL</div><div>Pages</div><div>Chunks</div></div>
+          ${
+            s
+              .map(
+                (x) => `
+            <div class="tr">
+              <code style="font-size:12px">${x.site_id}</code>
+              <a href="${x.seed_url}" target="_blank" style="color:var(--accent)">${x.seed_url}</a>
+              <div>${x.pages}</div>
+              <div>${x.chunks}</div>
+            </div>`
+              )
+              .join("") || '<div class="status">None yet.</div>'
+          }
+        `;
+        } catch {
+          toast("Failed to load sites");
+        }
+      }
+
+      async function ingest() {
+        const btn = byId("ingestBtn");
+        btn.disabled = true;
+        byId("ingestStatus").innerHTML =
+          '<span class="pill chip-ok">Working…</span>';
+        try {
+          const url = val("url");
+          const r = await fetch("/ingest", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ url }),
+          });
+          const ok = r.headers
+            .get("content-type")
+            ?.includes("application/json");
+          const j = ok ? await r.json() : { detail: await r.text() };
+          if (!r.ok) throw new Error(j.detail || "ingest failed");
+          byId(
+            "ingestStatus"
+          ).innerHTML = `Done · <span class="pill">site_id: ${j.site_id}</span>`;
+          refreshSites();
+        } catch (e) {
+          byId(
+            "ingestStatus"
+          ).innerHTML = `<span class="pill" style="background:rgba(239,68,68,.15);color:#ef4444;border-color:rgba(239,68,68,.25)">Error</span> <span class="status">${e.message}</span>`;
+        } finally {
+          btn.disabled = false;
+        }
+      }
+
+      function copyAnswer() {
+        const el = byId("answer");
+        const text = el.innerText || "";
+        if (!text.trim()) return;
+        navigator.clipboard.writeText(text).then(() => toast("Answer copied"));
+      }
+
+      function highlight(text, query) {
+        const terms = (query || "")
+          .toLowerCase()
+          .split(/\s+/)
+          .filter((t) => t.length > 2);
+        if (!terms.length) return text;
+        const escape = (s) =>
+          s.replace(
+            /[&<>]/g,
+            (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[m])
+          );
+        let html = escape(text);
+        terms.forEach((t) => {
+          const re = new RegExp(
+            `\\b(${t.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\$&")})\\b`,
+            "gi"
+          );
+          html = html.replace(re, "<mark>$1</mark>");
+        });
+        return html;
+      }
+
+      function renderAnswer(j) {
+        const q = val("question");
+        const text = (j.answer || "").replace(/\[Source\s+(\d+)\]/g, "[$1]");
+        const links = (j.sources || [])
+          .map(
+            (s, i) =>
+              `<a href="${s.url}" target="_blank">[${i + 1}] ${s.url}</a>`
+          )
+          .join("");
+        const meta = (j.sources || [])
+          .map(
+            (s, i) =>
+              `<details><summary>Source [${i + 1}] ${
+                s.url
+              }</summary><div class="status">score: ${Number(
+                s.score || 0
+              ).toFixed(3)}</div></details>`
+          )
+          .join("");
+        const pretty = highlight(text, q);
+        return `${pretty}\n\n<div class="sources">${links}</div>${meta}`;
+      }
+
+      async function ask() {
+        savePrefs();
+        const btn = byId("askBtn"),
+          pill = byId("modePill");
+        const payload = {
+          site_id: val("site"),
+          question: val("question"),
+          k: parseInt(val("topk"), 10) || 6,
+          gen_mode: val("provider"),
+          model: val("model") || undefined,
+          temperature: parseFloat(val("temperature")) || 0.2,
+          max_tokens: parseInt(val("max_tokens"), 10) || 512,
+          rerank: byId("rerank").checked,
+        };
+
+        btn.disabled = true;
+        byId("answerWrap").style.display = "block";
+        byId("answer").textContent = "Thinking…";
+        try {
+          const r = await fetch("/ask", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          let j;
+          if (r.headers.get("content-type")?.includes("application/json"))
+            j = await r.json();
+          else {
+            const txt = await r.text();
+            throw new Error(txt.slice(0, 200));
+          }
+          pill.style.display = "inline-flex";
+          pill.textContent = `mode: ${j.mode}`;
+          byId("answer").innerHTML = renderAnswer(j);
+        } catch (e) {
+          byId(
+            "answer"
+          ).innerHTML = `<span class="status">Error: ${e.message}</span>`;
+        } finally {
+          btn.disabled = false;
+        }
+      }
+
+      // boot
+      loadPrefs();
+      refreshSites();
+      byId("tempOut").textContent = byId("temperature").value;
+    </script>
+  </body>
+</html>
