@@ -5,32 +5,119 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Website RAG Starter</title>
     <style>
-      body {
-        font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
-        margin: 24px;
-        max-width: 900px;
+      :root {
+        --bg: #fff;
+        --card: #f8f9fb;
+        --border: #e5e7eb;
+        --text: #111827;
+        --muted: #6b7280;
       }
-      input,
-      button,
-      textarea {
-        font-size: 16px;
-        padding: 8px;
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto,
+          Arial;
+        margin: 24px;
+        max-width: 1000px;
+        color: var(--text);
+        background: var(--bg);
+      }
+      h1 {
+        margin: 6px 0 18px;
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 14px;
+        margin: 14px 0;
       }
       .row {
         display: flex;
-        gap: 8px;
-        margin-bottom: 12px;
+        gap: 10px;
+        margin: 10px 0;
+        flex-wrap: wrap;
       }
-      .card {
-        border: 1px solid #ddd;
-        padding: 12px;
+      input,
+      select,
+      button {
+        font-size: 15px;
+        padding: 9px 10px;
+        border: 1px solid var(--border);
         border-radius: 8px;
-        margin: 12px 0;
+      }
+      input,
+      select {
+        background: #fff;
+      }
+      button {
+        background: #111827;
+        color: #fff;
+        cursor: pointer;
+      }
+      button[disabled] {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+      .pill {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: #eef2ff;
+        color: #3730a3;
+        font-size: 12px;
+        border: 1px solid #e0e7ff;
       }
       .sources a {
         display: block;
         margin: 4px 0;
         text-decoration: none;
+      }
+      .muted {
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .answer {
+        white-space: pre-wrap;
+        line-height: 1.45;
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 12px;
+      }
+      details {
+        border: 1px dashed var(--border);
+        border-radius: 8px;
+        padding: 6px 10px;
+        background: #fff;
+      }
+      summary {
+        cursor: pointer;
+      }
+      .spinner {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border: 2px solid #ddd;
+        border-top-color: #111827;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        vertical-align: middle;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      .toast {
+        position: fixed;
+        right: 20px;
+        bottom: 20px;
+        background: #111827;
+        color: #fff;
+        padding: 10px 14px;
+        border-radius: 8px;
       }
       code {
         background: #f6f8fa;
@@ -41,33 +128,24 @@
   </head>
   <body>
     <h1>Website RAG Starter</h1>
+
     <div class="card">
       <h3>1) Ingest a website</h3>
       <div class="row">
         <input id="url" style="flex: 1" placeholder="https://example.com" />
-        <button onclick="ingest()">Ingest</button>
+        <button id="ingestBtn" onclick="ingest()">Ingest</button>
       </div>
-      <div id="ingestStatus"></div>
+      <div id="ingestStatus" class="muted"></div>
     </div>
 
-    <!-- <div class="card">
-      <h3>2) Ask a question</h3>
-      <div class="row">
-        <select id="site"></select>
-        <input
-          id="question"
-          style="flex: 1"
-          placeholder="Ask about the site..."
-        />
-        <button onclick="ask()">Ask</button>
-      </div>
-      <div id="answer"></div>
-    </div> -->
     <div class="card">
-      <h3>2) Ask a question</h3>
+      <h3>
+        2) Ask a question
+        <span id="modePill" class="pill" style="display: none"></span>
+      </h3>
 
       <div class="row">
-        <select id="site"></select>
+        <select id="site" style="min-width: 300px"></select>
         <input
           id="question"
           style="flex: 1"
@@ -76,18 +154,19 @@
       </div>
 
       <div class="row">
-        <label style="align-self: center">Provider:</label>
+        <label style="align-self: center">Provider</label>
         <select id="provider" onchange="onProviderChange()">
           <option value="extractive">Extractive (free)</option>
           <option value="openai">OpenAI</option>
           <option value="ollama">Ollama (local)</option>
         </select>
 
-        <input id="model" placeholder="model name (auto)" style="flex: 1" />
-      </div>
-
-      <div class="row">
-        <label style="align-self: center">Temp:</label>
+        <input
+          id="model"
+          placeholder="model name"
+          style="flex: 1; min-width: 220px"
+        />
+        <label style="align-self: center">Temp</label>
         <input
           id="temperature"
           type="range"
@@ -95,12 +174,12 @@
           max="1"
           step="0.1"
           value="0.2"
-          style="width: 160px"
+          style="width: 170px"
           oninput="tempOut.value=this.value"
         />
         <output id="tempOut">0.2</output>
 
-        <label style="align-self: center">Top-K:</label>
+        <label style="align-self: center">Top-K</label>
         <input
           id="topk"
           type="number"
@@ -109,8 +188,7 @@
           max="20"
           style="width: 80px"
         />
-
-        <label style="align-self: center">Max tokens:</label>
+        <label style="align-self: center">Max tokens</label>
         <input
           id="max_tokens"
           type="number"
@@ -119,16 +197,24 @@
           max="4096"
           style="width: 100px"
         />
-
         <label style="align-self: center"
           ><input id="rerank" type="checkbox" /> Re-rank</label
         >
 
-        <button onclick="ask()">Ask</button>
+        <button id="askBtn" onclick="ask()">Ask</button>
       </div>
 
-      <div id="answer"></div>
+      <div id="answerWrap" class="row" style="margin-top: 8px; display: none">
+        <div class="answer" id="answer" style="flex: 1"></div>
+      </div>
     </div>
+
+    <div class="card">
+      <h3>Known sites</h3>
+      <div id="sites" class="muted"></div>
+    </div>
+
+    <div id="toast" class="toast" style="display: none"></div>
 
     <script>
       const defaults = {
@@ -137,116 +223,169 @@
         ollama: { model: "llama3.1:8b-instruct" },
       };
 
+      function savePrefs() {
+        const prefs = {
+          provider: val("provider"),
+          model: val("model"),
+          temperature: val("temperature"),
+          topk: val("topk"),
+          max_tokens: val("max_tokens"),
+          rerank: byId("rerank").checked,
+        };
+        localStorage.setItem("rag-prefs", JSON.stringify(prefs));
+      }
+      function loadPrefs() {
+        const p = JSON.parse(localStorage.getItem("rag-prefs") || "{}");
+        if (p.provider) byId("provider").value = p.provider;
+        onProviderChange(); // sets model default
+        if (p.model) byId("model").value = p.model;
+        if (p.temperature)
+          (byId("temperature").value = p.temperature),
+            (byId("tempOut").value = p.temperature);
+        if (p.topk) byId("topk").value = p.topk;
+        if (p.max_tokens) byId("max_tokens").value = p.max_tokens;
+        if (p.rerank != null) byId("rerank").checked = p.rerank;
+      }
       function onProviderChange() {
-        const p = document.getElementById("provider").value;
-        document.getElementById("model").value = defaults[p].model || "";
+        const p = val("provider");
+        const curr = byId("model").value.trim();
+        if (!curr) byId("model").value = defaults[p].model || "";
+        savePrefs();
       }
 
-      async function ask() {
-        const site_id = document.getElementById("site").value;
-        const question = document.getElementById("question").value;
-        const provider = document.getElementById("provider").value;
-        const model = document.getElementById("model").value;
-        const temperature = parseFloat(
-          document.getElementById("temperature").value
-        );
-        const k = parseInt(document.getElementById("topk").value, 10);
-        const max_tokens = parseInt(
-          document.getElementById("max_tokens").value,
-          10
-        );
-        const rerank = document.getElementById("rerank").checked;
-
-        const r = await fetch("/ask", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            site_id,
-            question,
-            k,
-            gen_mode: provider,
-            model,
-            temperature,
-            max_tokens,
-            rerank,
-          }),
-        });
-        const j = await r.json();
-        const srcs = (j.sources || [])
-          .map(
-            (s, i) =>
-              `<a href="${s.url}" target="_blank">[${i + 1}] ${s.url}</a>`
-          )
-          .join("");
-        document.getElementById(
-          "answer"
-        ).innerHTML = `<pre>${j.answer}</pre><div class="sources">${srcs}</div><div>mode: <code>${j.mode}</code></div>`;
+      function byId(id) {
+        return document.getElementById(id);
       }
-    </script>
+      function val(id) {
+        return document.getElementById(id).value;
+      }
 
-    <div class="card">
-      <h3>Known sites</h3>
-      <div id="sites"></div>
-    </div>
+      function toast(msg, ms = 3000) {
+        const t = byId("toast");
+        t.textContent = msg;
+        t.style.display = "block";
+        setTimeout(() => (t.style.display = "none"), ms);
+      }
 
-    <script>
       async function refreshSites() {
-        const r = await fetch("/sites");
-        const s = await r.json();
-        const sel = document.getElementById("site");
-        sel.innerHTML = "";
-        s.forEach((x) => {
-          const o = document.createElement("option");
-          o.value = x.site_id;
-          o.textContent =
-            x.seed_url + " (" + x.pages + " pages, " + x.chunks + " chunks)";
-          sel.appendChild(o);
-        });
-        document.getElementById("sites").innerHTML = s
-          .map(
-            (x) =>
-              `<div><code>${x.site_id}</code> — <a href="${x.seed_url}" target="_blank">${x.seed_url}</a> — pages: ${x.pages} — chunks: ${x.chunks}</div>`
-          )
-          .join("");
-      }
-      async function ingest() {
-        const url = document.getElementById("url").value;
-        document.getElementById("ingestStatus").textContent =
-          "Crawling & embedding...";
-        const r = await fetch("/ingest", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url }),
-        });
-        const j = await r.json();
-        if (!r.ok) {
-          document.getElementById("ingestStatus").textContent =
-            "Error: " + (j.detail || JSON.stringify(j));
-          return;
+        try {
+          const r = await fetch("/sites");
+          const s = await r.json();
+          const sel = byId("site");
+          sel.innerHTML = "";
+          s.forEach((x) => {
+            const o = document.createElement("option");
+            o.value = x.site_id;
+            o.textContent = `${x.seed_url} (${x.pages} pages, ${x.chunks} chunks)`;
+            sel.appendChild(o);
+          });
+          byId("sites").innerHTML =
+            s
+              .map(
+                (x) =>
+                  `<div><code>${x.site_id}</code> — <a href="${x.seed_url}" target="_blank">${x.seed_url}</a> — pages: ${x.pages} — chunks: ${x.chunks}</div>`
+              )
+              .join("") || "None yet.";
+        } catch (e) {
+          toast("Failed to load sites");
         }
-        document.getElementById("ingestStatus").textContent =
-          "Done. site_id=" + j.site_id;
-        refreshSites();
       }
+
+      async function ingest() {
+        const btn = byId("ingestBtn");
+        btn.disabled = true;
+        byId(
+          "ingestStatus"
+        ).innerHTML = `<span class="spinner"></span> Crawling & embedding...`;
+        try {
+          const url = val("url");
+          const r = await fetch("/ingest", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ url }),
+          });
+          const j = await r.json();
+          if (!r.ok) {
+            throw new Error(j.detail || JSON.stringify(j));
+          }
+          byId(
+            "ingestStatus"
+          ).innerHTML = `Done. site_id=<code>${j.site_id}</code>`;
+          refreshSites();
+        } catch (err) {
+          byId("ingestStatus").textContent = "Error: " + err.message;
+          toast("Ingest failed: " + err.message, 4000);
+        } finally {
+          btn.disabled = false;
+        }
+      }
+
+      /* SINGLE ask() — no duplicates */
       async function ask() {
-        const site_id = document.getElementById("site").value;
-        const question = document.getElementById("question").value;
-        const r = await fetch("/ask", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ site_id, question }),
-        });
-        const j = await r.json();
-        const srcs = (j.sources || [])
+        savePrefs();
+        const btn = byId("askBtn");
+        const pill = byId("modePill");
+        const provider = val("provider");
+        const model = val("model").trim();
+        const payload = {
+          site_id: val("site"),
+          question: val("question"),
+          k: parseInt(val("topk"), 10) || 6,
+          gen_mode: provider,
+          model: model || undefined,
+          temperature: parseFloat(val("temperature")) || 0.2,
+          max_tokens: parseInt(val("max_tokens"), 10) || 512,
+          rerank: byId("rerank").checked,
+        };
+
+        btn.disabled = true;
+        byId("answerWrap").style.display = "block";
+        byId("answer").innerHTML = `<span class="spinner"></span> Thinking...`;
+
+        try {
+          const r = await fetch("/ask", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          const j = await r.json();
+          // render
+          pill.style.display = "inline-block";
+          pill.textContent = `mode: ${j.mode}`;
+          byId("answer").innerHTML = renderAnswer(j);
+        } catch (err) {
+          toast("Ask failed: " + err.message, 4000);
+          byId("answer").textContent = "Error: " + err.message;
+        } finally {
+          btn.disabled = false;
+        }
+      }
+
+      function renderAnswer(j) {
+        const links = (j.sources || [])
           .map(
             (s, i) =>
               `<a href="${s.url}" target="_blank">[${i + 1}] ${s.url}</a>`
           )
           .join("");
-        document.getElementById(
-          "answer"
-        ).innerHTML = `<pre>${j.answer}</pre><div class="sources">${srcs}</div><div>mode: <code>${j.mode}</code></div>`;
+        // inline refs: replace "[Source n]" -> "[n]"
+        const text = (j.answer || "").replace(/\[Source\s+(\d+)\]/g, "[$1]");
+        // Show snippets collapsible:
+        const snippets = (j.sources || [])
+          .map(
+            (s, i) =>
+              `<details><summary>Source [${i + 1}] ${
+                s.url
+              }</summary><div class="muted">score: ${Number(
+                s.score || 0
+              ).toFixed(3)}</div></details>`
+          )
+          .join("");
+        return `${text}\n\n<div class="sources">${links}</div>${snippets}`;
       }
+
+      // init
+      loadPrefs();
       refreshSites();
     </script>
   </body>
