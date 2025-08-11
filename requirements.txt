@@ -13,3 +13,7 @@ python-multipart==0.0.9
 openai==1.37.1
 orjson==3.10.3
 requests==2.32.3
+transformers==4.42.4
+sentencepiece==0.2.0   # needed for T5 models
+torch>=2.2.0           # CPU wheel is fine; first run downloads model
+

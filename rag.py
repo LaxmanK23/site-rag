@@ -2,6 +2,7 @@ import os, requests
 from typing import Dict, Any, List
 from embedder import SiteIndex
 from sentence_transformers import CrossEncoder
+from transformers import pipeline
 
 SYSTEM_PROMPT = """You are a helpful assistant. Answer based only on the provided context.
 If the answer isn't in the context, say you don't know and suggest where to look on the site.
@@ -116,5 +117,59 @@ def answer_question(
             return build_ollama_answer(hits, question, model, temperature, max_tokens)
         except Exception as e:
             return {"answer": f"Ollama error: {e}", "sources": [], "mode": "error"}
+    
+     # ⭐ NEW: local summarizer (no API)
+    if gm == "localsum":
+        try:
+            return build_local_summary_answer(hits, question, model, max_tokens)
+        except Exception as e:
+            return {"answer": f"Local summarizer error: {e}", "sources": [], "mode": "error"}
+
 
     return build_extractive_answer(hits, question)
+
+
+# ----- Local summarizer (transformers) -----
+_SUM_PIPELINE = None
+
+def get_summarizer(model_name: str):
+    global _SUM_PIPELINE
+    if _SUM_PIPELINE is None or _SUM_PIPELINE.model.name_or_path != model_name:
+        # for small + fast default, use "t5-small"
+        _SUM_PIPELINE = pipeline(
+            "summarization",
+            model=model_name,
+            tokenizer=model_name,
+            framework="pt",   # uses torch
+            device_map="auto" if os.getenv("HF_ACCEL") else None
+        )
+    return _SUM_PIPELINE
+
+def build_local_summary_answer(hits: List[Dict], question: str, model: str, max_tokens: int = 256) -> Dict[str, Any]:
+    """
+    Summarize the top retrieved chunks locally with a HF model.
+    """
+    m = model or os.getenv("LOCAL_SUM_MODEL", "t5-small")
+    summarizer = get_summarizer(m)
+
+    # Concatenate top chunks (trim to keep within model limits)
+    max_chars = 8000  # rough guard; most summarizers handle ~1024 tokens
+    context = "\n\n".join(h["doc"]["text"] for h in hits[:6])[:max_chars]
+
+    prompt = (
+        "Summarize the following content to answer the user's question. "
+        "Use only the content; if it's not present, say you don't know. "
+        f"Question: {question}\n\nContent:\n{context}"
+    )
+
+    # Many summarizers accept max_length / min_length in tokens (model-side)
+    out = summarizer(
+        prompt,
+        max_length=max(64, min(1024, max_tokens)),
+        min_length=48,
+        do_sample=False,
+        clean_up_tokenization_spaces=True
+    )[0]["summary_text"]
+
+    sources = [{"url": h["doc"]["url"], "score": h.get("score", 0.0)} for h in hits[:5]]
+    return {"answer": out, "sources": sources, "mode": f"localsum:{m}"}
