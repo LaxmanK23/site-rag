@@ -65,6 +65,9 @@ poetry.lock
 # dotenv
 # .env
 
+# data
+data/
+
 # virtualenv
 .venv/
 venv/
